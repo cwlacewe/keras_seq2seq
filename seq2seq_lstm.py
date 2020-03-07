@@ -58,9 +58,11 @@ http://www.manythings.org/anki/
     https://arxiv.org/abs/1406.1078
 """
 from __future__ import print_function
-from keras.models import Model, load_model
-from keras.layers import Input, LSTM, Dense
-from keras.callbacks import EarlyStopping
+import tensorflow as tf
+from tensorflow.keras import Model
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Input, LSTM, Dense
+from tensorflow.keras.callbacks import EarlyStopping
 from nltk.translate.bleu_score import corpus_bleu
 import numpy as np
 import os
@@ -118,10 +120,16 @@ def prepare_data(data_path, sample_indices, test_indices, shuffle=True):
 
     input_characters = sorted(list(input_characters))
     target_characters = sorted(list(target_characters))
-    num_encoder_tokens = len(input_characters)
-    num_decoder_tokens = len(target_characters)
-    max_encoder_seq_length = max([len(txt) for txt in input_texts])
-    max_decoder_seq_length = max([len(txt) for txt in target_texts])
+    input_characters_test = sorted(list(input_characters_test))
+    target_characters_test = sorted(list(target_characters_test))
+    all_input_characters = sorted(list(set(input_characters + input_characters_test)))
+    all_target_characters = sorted(list(set(target_characters + target_characters_test)))
+    all_input_texts = input_texts + input_texts_test
+    all_target_texts = target_texts + target_texts_test
+    num_encoder_tokens = len(all_input_characters)
+    num_decoder_tokens = len(all_target_characters)
+    max_encoder_seq_length = max([len(txt) for txt in all_input_texts])
+    max_decoder_seq_length = max([len(txt) for txt in all_target_texts])
 
     print('Data path:', data_path)
     print('Number of samples:', len(input_texts))
@@ -131,9 +139,9 @@ def prepare_data(data_path, sample_indices, test_indices, shuffle=True):
     print('Max sequence length for outputs:', max_decoder_seq_length)
 
     input_token_index = dict(
-        [(char, i) for i, char in enumerate(input_characters)])
+        [(char, i) for i, char in enumerate(all_input_characters)])
     target_token_index = dict(
-        [(char, i) for i, char in enumerate(target_characters)])
+        [(char, i) for i, char in enumerate(all_target_characters)])
 
     # Train data
     encoder_input_data = np.zeros(
