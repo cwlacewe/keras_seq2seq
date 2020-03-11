@@ -178,14 +178,18 @@ def get_input_and_target_data(input_sentences, target_sentences, max_encoder_seq
         dtype='float32')
     for i, (input_text, target_text) in enumerate(zip(input_sentences, target_sentences)):
         for t, char in enumerate(input_text):
-            encoder_input_data[i, t, input_token_index[char]] = 1.
+            char_idx = input_token_index[char]
+            if char_idx < num_encoder_tokens:
+                encoder_input_data[i, t, char_idx] = 1.
         for t, char in enumerate(target_text):
-            # decoder_target_data is ahead of decoder_input_data by one timestep
-            decoder_input_data[i, t, target_token_index[char]] = 1.
-            if t > 0:
-                # decoder_target_data will be ahead by one timestep
-                # and will not include the start character.
-                decoder_target_data[i, t - 1, target_token_index[char]] = 1.
+            char_idx = target_token_index[char]
+            if char_idx < num_decoder_tokens:
+                # decoder_target_data is ahead of decoder_input_data by one timestep
+                decoder_input_data[i, t, char_idx] = 1.
+                if t > 0:
+                    # decoder_target_data will be ahead by one timestep
+                    # and will not include the start character.
+                    decoder_target_data[i, t - 1, char_idx] = 1.
     return encoder_input_data, decoder_input_data, decoder_target_data
     
 
@@ -314,7 +318,6 @@ def eval_test_set(encoder_model, decoder_model, test_input_texts, test_target_te
     # print('Bleu-2: %f' % corpus_bleu(actual_texts, predicted_texts, weights=(0.5, 0.5, 0, 0)))
     # print('Bleu-3: %f' % corpus_bleu(actual_texts, predicted_texts, weights=(0.3, 0.3, 0.3, 0)))
     # print('Bleu-4: %f' % corpus_bleu(actual_texts, predicted_texts, weights=(0.25, 0.25, 0.25, 0.25)))
-    print('Avg. Bleu: %f' % (total_bleu / len(actual_texts)))
-    
-    
-    
+    avg_bleu = (total_bleu / len(actual_texts))
+    print('Avg. Bleu: %f' % avg_bleu)
+    return avg_bleu

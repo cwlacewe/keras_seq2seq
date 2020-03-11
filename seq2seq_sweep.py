@@ -12,6 +12,7 @@ import random
 import io
 from pathlib import Path
 from tools.utils import define_model, get_input_and_target_data, eval_test_set
+import pandas as pd
 
 def get_data(args):
     input_texts = []
@@ -84,9 +85,10 @@ def main(input_params):
     # os.makedirs('models', exist_ok=True)
     # encoder_model, decoder_model = save_trained_models(model, encoder_model, decoder_model, num_units)
     print("TEST====================================")
-    eval_test_set(encoder_model, decoder_model, input_texts, target_texts, encoder_input_data,
+    bleu = eval_test_set(encoder_model, decoder_model, input_texts, target_texts, encoder_input_data,
                       num_encoder_tokens, num_decoder_tokens,
                       target_token_index, max_decoder_seq_length)
+    return bleu
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -116,15 +118,25 @@ if __name__ == "__main__":
     args.datapath = os.path.join(os.path.realpath(os.getcwd()), str(args.datapath))
     args.num_lines = sum(1 for line in io.open(args.datapath, 'r', encoding='utf-8'))
     
-    # df = pd.DataFrame(columns=[])
     if all(arg is None for arg in [args.num_units, args.enc_dim, args.dec_dim]):
+        df = pd.DataFrame(columns=['Hidden Units', 'Input tokens/chars', 'Output tokens/chars', 'Avg. BLEU'])
         for num_units in [128, 256, 512]:
             for enc_dim in [32, 64, 71, 93, 128]:
                 for dec_dim in [32, 64, 71, 93, 128]:
                     args.num_units, args.enc_dim, args.dec_dim = num_units, enc_dim, dec_dim
-                    main(args)
+                    bleu = main(args)
+                    df = df.append({'Hidden Units': num_units,
+                                    'Input tokens/chars': enc_dim,
+                                    'Output tokens/chars': dec_dim,
+                                    'Avg. BLEU': bleu}, sort=False)
+                    print('\nHidden Units: ', num_units)
+                    print('Input tokens/chars: ', enc_dim)
+                    print('Output tokens/chars: ', dec_dim)
+                    print('Avg. BLEU: ', bleu)
+        df.to_csv('sweep_numunits_latentdim.csv', index=False)
+
     else:
         args.num_units = args.num_units if args.num_units is not None else 256
         args.enc_dim = args.enc_dim if args.enc_dim is not None else 71
         args.dec_dim = args.dec_dim if args.dec_dim is not None else 93
-        main(args)
+        bleu = main(args)
